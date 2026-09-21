@@ -4,6 +4,37 @@
   
     
     <entry>
+      <title>agent记忆架构</title>
+      <link href="/2026/09/21/agent%E8%AE%B0%E5%BF%86%E6%9E%B6%E6%9E%84/"/>
+      <url>/2026/09/21/agent%E8%AE%B0%E5%BF%86%E6%9E%B6%E6%9E%84/</url>
+      
+        <content type="html"><![CDATA[<h3 id="1-记忆架构总览："><a href="#1-记忆架构总览：" class="headerlink" title="1. 记忆架构总览："></a>1. 记忆架构总览：</h3><ul><li><p>短期记忆：短期记忆一般保留近期完整聊天消息。</p></li><li><p>长期记忆：长期记忆保留一些之前的需要持久化的消息：</p><table><thead><tr><th>类型</th><th>例子</th><th>存储方式</th></tr></thead><tbody><tr><td>用户事实&#x2F;偏好</td><td>“用户用 Python”、”时区 UTC+8”</td><td>结构化字段，会话开始直接加载</td></tr><tr><td>情景记忆</td><td>“上周帮用户排查过 XX bug，结论是 XX”</td><td>向量库，按需检索</td></tr><tr><td>程序性记忆</td><td>学到的可复用工作流</td><td>类似 Voyager 的 skill 库</td></tr><tr><td>会话摘要</td><td>每次会话一段总结</td><td>向量库</td></tr></tbody></table></li></ul><h3 id="2-短期记忆实现"><a href="#2-短期记忆实现" class="headerlink" title="2. 短期记忆实现:"></a>2. 短期记忆实现:</h3><ul><li>保留原则：<ul><li>一般保留完整对话，用户一问，AI一答，属于一个完整的轮次。</li><li>不能切在 tool_call 和 tool_result 之间</li><li>建议按 <strong>token 数</strong>而不是固定轮数裁剪——工具结果（比如读了个大文件）长度差异巨大</li><li>超窗的旧轮次不要直接丢，<strong>压缩成摘要放前面</strong>；过长的单个工具结果可以只保留首尾截断</li></ul></li></ul><h3 id="3-长期记忆实现："><a href="#3-长期记忆实现：" class="headerlink" title="3. 长期记忆实现："></a>3. 长期记忆实现：</h3><p>触发时机有两种： 1. 事件触发 2.阈值触发</p><ul><li>事件触发：通过漏斗式进行长期记忆存储：<ul><li>L0层： <ul><li>显式信号：<code>记住</code>、<code>以后都</code>、<code>我是</code>、<code>我们公司用</code></li><li>纠正信号：<code>不对</code>、<code>不是</code>、<code>我说的是</code> —— 价值最高，必触发</li><li>限流：每会话最多抽取 K 次，两次之间至少隔 N 轮</li><li>纯工具结果轮、“好的&#x2F;继续”这类短轮次直接跳过（可选）</li></ul></li><li>L1层：<ul><li>利用小模型去判断当前会话中是否有可沉淀的长久记忆，判断的位置可以在消息结构中维护游标，来表示下一次从第几轮判断。</li></ul></li><li>L2层：<ul><li>抽取候选记忆<br>   → 每条候选去向量库搜相似既有记忆<br>   → LLM 判断操作：<br>       NOOP   （重复，跳过）<br>       UPDATE （合并，新信息覆盖旧的）<br>       DELETE （直接矛盾，删除旧的）<br>       ADD    （全新，插入）</li></ul></li></ul></li><li>阈值触发：在压缩上下文的时候，顺便调用模型执行L1层和L2层。</li></ul><p>note: 说实话，如果你的产品会话普遍很短（&lt;30 分钟），<strong>只做会话结束批量抽取就完全够了</strong></p><h3 id="4-长期记忆膨胀"><a href="#4-长期记忆膨胀" class="headerlink" title="4.长期记忆膨胀"></a>4.长期记忆膨胀</h3><p>写入本身便宜，可怕的是低价值记忆堆积拖垮检索精度。防线：</p><ul><li>写入时打 importance 分</li><li>会话级写入预算：单会话最多落 N 条</li><li>定期整理任务：合并相似、归档「低 importance + 低 use_count + 老」的记忆</li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> 技术分享 </category>
+          
+          <category> agent </category>
+          
+          <category> memory </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> agent </tag>
+            
+            <tag> memory </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>PI agent harness架构浅谈</title>
       <link href="/2026/09/21/PI-agent-harness%E6%9E%B6%E6%9E%84%E6%B5%85%E8%B0%88/"/>
       <url>/2026/09/21/PI-agent-harness%E6%9E%B6%E6%9E%84%E6%B5%85%E8%B0%88/</url>
@@ -11,12 +42,24 @@
         <content type="html"><![CDATA[<h3 id="1-PI将harness层拆成了四个可扩展部分"><a href="#1-PI将harness层拆成了四个可扩展部分" class="headerlink" title="1. PI将harness层拆成了四个可扩展部分"></a>1. PI将harness层拆成了四个可扩展部分</h3><ul><li>扩展层：这里的扩展层可以是钩子函数包装成的扩展，也可以是MCP服务，skill，虽然官方不支持MCP等功能，但是我们都可以通过扩展实现，包括通过扩展控制不同的挂载点。</li><li>skill层：这个就是根据当前持有的skill，渐进式披露工具的信息，通过不同skill，达到不同的效果。</li><li>提示词层: PI可以将AGENTS.md， SYSTEM.md, CLUADE.md等加入到上下文提示词中，先加载全局，在加载项目级</li><li>主题层: TUI外观</li></ul><p>这个分层思路本身就是一种 harness 设计：<strong>把”模型能看到什么、什么时候能看到”完全交给规则和扩展，而不是写死在内核里。</strong></p>]]></content>
       
       
+      <categories>
+          
+          <category> 技术分享 </category>
+          
+          <category> agent </category>
+          
+          <category> harness </category>
+          
+      </categories>
+      
       
         <tags>
             
             <tag> agent </tag>
             
             <tag> PI </tag>
+            
+            <tag> harness </tag>
             
         </tags>
       
@@ -31,6 +74,12 @@
       
         <content type="html"><![CDATA[<h2 id="项目目标与核心功能"><a href="#项目目标与核心功能" class="headerlink" title="项目目标与核心功能"></a>项目目标与核心功能</h2><p>该项目是一个基于Spring AI的智能助手平台，主要目标是构建一个集成多种AI能力和工具的聊天系统。其核心功能包括：</p><h3 id="基础聊天功能：支持与AI模型进行对话交互"><a href="#基础聊天功能：支持与AI模型进行对话交互" class="headerlink" title="基础聊天功能：支持与AI模型进行对话交互"></a>基础聊天功能：支持与AI模型进行对话交互</h3><h3 id="RAG（检索增强生成）功能：通过Redis向量库存储和检索文档知识，增强AI回答的准确性"><a href="#RAG（检索增强生成）功能：通过Redis向量库存储和检索文档知识，增强AI回答的准确性" class="headerlink" title="RAG（检索增强生成）功能：通过Redis向量库存储和检索文档知识，增强AI回答的准确性"></a>RAG（检索增强生成）功能：通过Redis向量库存储和检索文档知识，增强AI回答的准确性</h3><h3 id="互联网搜索功能：集成SearXNG搜索引擎，让AI能够获取实时信息"><a href="#互联网搜索功能：集成SearXNG搜索引擎，让AI能够获取实时信息" class="headerlink" title="互联网搜索功能：集成SearXNG搜索引擎，让AI能够获取实时信息"></a>互联网搜索功能：集成SearXNG搜索引擎，让AI能够获取实时信息</h3><h3 id="MCP工具集成：支持多种MCP（Model-Context-Protocol）工具，如文件系统访问、邮件发送等"><a href="#MCP工具集成：支持多种MCP（Model-Context-Protocol）工具，如文件系统访问、邮件发送等" class="headerlink" title="MCP工具集成：支持多种MCP（Model Context Protocol）工具，如文件系统访问、邮件发送等"></a>MCP工具集成：支持多种MCP（Model Context Protocol）工具，如文件系统访问、邮件发送等</h3><h2 id="系统整体架构"><a href="#系统整体架构" class="headerlink" title="系统整体架构"></a>系统整体架构</h2><h3 id="mcp-client（客户端模块）："><a href="#mcp-client（客户端模块）：" class="headerlink" title="mcp-client（客户端模块）："></a>mcp-client（客户端模块）：</h3><ul><li>提供Web API接口</li><li>集成OpenAI等大语言模型</li><li>管理Redis向量存储</li><li>集成SearXNG搜索引擎</li><li>实现SSE（Server-Sent Events）实时通信</li></ul><h3 id="mcp-server（服务端模块）："><a href="#mcp-server（服务端模块）：" class="headerlink" title="mcp-server（服务端模块）："></a>mcp-server（服务端模块）：</h3><ul><li>实现MCP协议服务器</li><li>提供邮件发送等工具功能</li><li>集成MyBatis-Plus操作数据库</li><li>两个模块通过MCP协议进行通信，客户端可以调用服务端提供的各种工具。</li></ul><h2 id="关键业务流程"><a href="#关键业务流程" class="headerlink" title="关键业务流程"></a>关键业务流程</h2><ol><li>文档上传与RAG处理流程：<br>用户通过uploadRagDoc接口上传文档<br>系统使用TextReader读取文档内容<br>通过CustomTextSplitter对文档进行分段处理<br>使用RedisVectorStore将文档向量化并存储到Redis向量库</li><li>RAG问答流程：<br>用户发起查询请求到search接口<br>系统通过RedisVectorStore进行相似性搜索获取相关文档<br>构造包含上下文的提示词发送给AI模型<br>AI模型基于上下文生成回答并返回给用户</li><li>互联网搜索流程：<br>用户发起互联网搜索请求到&#x2F;internet&#x2F;search接口<br>系统通过OkHttp调用SearXNG搜索引擎获取结果<br>构造包含搜索结果的提示词发送给AI模型<br>AI模型综合搜索结果生成回答</li><li>MCP工具调用流程：<br>AI模型根据用户请求判断是否需要调用工具<br>通过MCP协议调用相应的工具（如邮件发送）<br>工具执行完成后将结果返回给AI模型<br>AI模型综合工具执行结果生成最终回答</li></ol><h2 id="使用的技术栈与关键库"><a href="#使用的技术栈与关键库" class="headerlink" title="使用的技术栈与关键库"></a>使用的技术栈与关键库</h2><h3 id="后端技术栈："><a href="#后端技术栈：" class="headerlink" title="后端技术栈："></a>后端技术栈：</h3><p>Spring Boot 3：基础框架<br>Spring AI：AI集成框架<br>Redis：向量数据库存储<br>MyBatis-Plus：数据库访问<br>MySQL：关系型数据库<br>OkHttp：HTTP客户端请求<br>MCP（Model Context Protocol）：工具协议</p><h3 id="关键依赖库："><a href="#关键依赖库：" class="headerlink" title="关键依赖库："></a>关键依赖库：</h3><p>spring-ai-starter-model-openai：OpenAI模型集成<br>spring-ai-starter-vector-store-redis：Redis向量存储<br>spring-ai-starter-model-transformers：文本向量化处理<br>spring-ai-tika-document-reader：文档读取<br>spring-ai-starter-mcp-client&#x2F;server：MCP协议支持<br>okhttp3：网络请求<br>mybatis-plus-boot-starter：数据库操作<br>flexmark：Markdown转HTML</p><h2 id="特殊设计或技术难点"><a href="#特殊设计或技术难点" class="headerlink" title="特殊设计或技术难点"></a>特殊设计或技术难点</h2><ol><li>自定义文本分割器<br> 项目实现了CustomTextSplitter类，使用\s*\r\n\s*\r\n\s*正则表达式按段落分割文本，比默认的TokenTextSplitter更适合中文文档处理。</li><li>多种通信方式集成<br> 项目同时支持：<br> SSE（Server-Sent Events）实现实时通信<br> MCP协议工具调用<br> 标准HTTP API接口</li><li>环境变量管理<br> 使用dotenv-java库管理敏感配置信息，通过.env文件存储API密钥等敏感信息，提高安全性。</li><li>复杂的提示词工程<br> 项目针对不同场景（RAG问答、互联网搜索、邮件发送等）设计了专门的提示词模板，确保AI能够准确理解上下文并生成合适的回答。</li><li>工具集成与调用<br> 通过MCP协议集成多种工具，包括文件系统访问和邮件发送功能，使得AI能够在需要时调用这些工具完成复杂任务。<br> 这个项目充分展示了如何将Spring AI与各种外部服务集成，构建一个功能丰富的智能助手系统。</li></ol><img src="/2025/11/06/AI%E9%A1%B9%E7%9B%AE%E6%80%BB%E7%BB%93/a.png" class="" title="头像">]]></content>
       
+      
+      <categories>
+          
+          <category> 个人项目 </category>
+          
+      </categories>
       
       
         <tags>

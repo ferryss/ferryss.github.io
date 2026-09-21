@@ -1,12 +1,52 @@
 <!DOCTYPE html><html class="appearance-auto" lang="zh-CN"><head><meta charset="UTF-8"><title>Ferry's blog</title><meta name="description" content="This person is lazy and left nothing behind"><meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, initial-scale=1"><!-- Google Analytics --><!-- End Google Analytics -->
-<!-- Baidu Analytics --><!-- End Baidu Analytics --><link rel="icon" href="/images/favicon.ico"><link rel="stylesheet" href="/style/common/bulma.css"><link rel="stylesheet" href="/style/base.css"><link rel="stylesheet" href="/style/common/helper.css"><script src="/js/common.js"></script><link rel="stylesheet" href="/style/widget-post-list.css"><meta name="generator" content="Hexo 8.1.0"></head><body class="is-flex is-flex-direction-column"><header class="header-widget is-flex-shrink-0 is-hidden-mobile"><div class="container is-fullhd is-flex is-justify-content-space-between is-align-items-center is-full-height"><section class="is-hidden-mobile is-flex-shrink-0"><h2><a href="/">Ferry's blog</a></h2></section><h3 class="is-hidden-mobile is-family-serif is-full-height is-flex is-align-items-center is-flex-shrink-0"><span>归档 · 2026</span></h3><aside class="is-flex-shrink-0"><h3 class="is-inline-block"><a href="/">首页</a></h3><h3 class="is-inline-block"><a href="/about">关于</a></h3><h3 class="is-inline-block"><a href="/archives">归档</a></h3></aside></div></header><header class="is-flex header-widget is-flex-shrink-0 is-align-items-center is-justify-content-center is-hidden-tablet"><h3 class="is-inline-block"><a href="/">首页</a></h3><h3 class="is-inline-block"><a href="/about">关于</a></h3><h3 class="is-inline-block"><a href="/archives">归档</a></h3></header><main><article class="post-container is-flex is-justify-content-center section container is-max-widescreen pt-4 px-2"><div class="columns is-variable is-1-tablet is-3-desktop-only is-2-widescreen is-full-width"><section class="column"><article class="post-item-card"><section class="content post-card-content p-4 pb-5"><header><a href="/tags/agent"><i class="tag post-item-tag">agent</i></a><a href="/tags/PI"><i class="tag post-item-tag">PI</i></a></header><h2 class="mt-4 mb-0 is-family-serif"><a href="/2026/09/21/PI-agent-harness%E6%9E%B6%E6%9E%84%E6%B5%85%E8%B0%88/">PI agent harness架构浅谈</a></h2><time class="has-text-grey" datetime="2026-09-21T13:31:56.000Z">2026-09-21</time><p class="is-flex-grow-2 mt-2">1. PI将harness层拆成了四个可扩展部分
+<!-- Baidu Analytics --><!-- End Baidu Analytics --><link rel="icon" href="/images/favicon.ico"><link rel="stylesheet" href="/style/common/bulma.css"><link rel="stylesheet" href="/style/base.css"><link rel="stylesheet" href="/style/common/helper.css"><script src="/js/common.js"></script><link rel="stylesheet" href="/style/widget-post-list.css"><meta name="generator" content="Hexo 8.1.0"></head><body class="is-flex is-flex-direction-column"><header class="header-widget is-flex-shrink-0 is-hidden-mobile"><div class="container is-fullhd is-flex is-justify-content-space-between is-align-items-center is-full-height"><section class="is-hidden-mobile is-flex-shrink-0"><h2><a href="/">Ferry's blog</a></h2></section><h3 class="is-hidden-mobile is-family-serif is-full-height is-flex is-align-items-center is-flex-shrink-0"><span>归档 · 2026</span></h3><aside class="is-flex-shrink-0"><h3 class="is-inline-block"><a href="/">首页</a></h3><h3 class="is-inline-block"><a href="/about">关于</a></h3><h3 class="is-inline-block"><a href="/archives">归档</a></h3></aside></div></header><header class="is-flex header-widget is-flex-shrink-0 is-align-items-center is-justify-content-center is-hidden-tablet"><h3 class="is-inline-block"><a href="/">首页</a></h3><h3 class="is-inline-block"><a href="/about">关于</a></h3><h3 class="is-inline-block"><a href="/archives">归档</a></h3></header><main><article class="post-container is-flex is-justify-content-center section container is-max-widescreen pt-4 px-2"><div class="columns is-variable is-1-tablet is-3-desktop-only is-2-widescreen is-full-width"><section class="column"><article class="post-item-card"><section class="content post-card-content p-4 pb-5"><header><a href="/tags/agent"><i class="tag post-item-tag">agent</i></a><a href="/tags/memory"><i class="tag post-item-tag">memory</i></a></header><h2 class="mt-4 mb-0 is-family-serif"><a href="/2026/09/21/agent%E8%AE%B0%E5%BF%86%E6%9E%B6%E6%9E%84/">agent记忆架构</a></h2><time class="has-text-grey" datetime="2026-09-21T13:46:41.000Z">2026-09-21</time><p class="is-flex-grow-2 mt-2">1. 记忆架构总览：
+短期记忆：短期记忆一般保留近期完整聊天消息。
+
+长期记忆：长期记忆保留一些之前的需要持久化的消息：
+
+
+
+类型
+例子
+存储方式
+
+
+
+用户事实&amp;#x2F;偏好
+“用户用 Python”、”时区 UTC+8”
+结构化字段，会话开始直接加载
+
+
+情景记忆
+“上周帮用户排查过 XX bug，结论是 XX”
+向量库，按需检索
+
+
+程序性记忆
+学到的可复用工作流
+类似 Voyager 的 skill 库
+
+
+会话摘要
+每次会话一段总结
+向量库
+
+
+
+
+2. 短期记忆实现:
+保留原则：
+一般保留完整对话，用户一问，AI一答，属于一个完整的轮次。
+不能切在 tool_call 和 tool_result 之间
+建议按 token 数而不是固定轮数裁剪——工具结果（比如读了个大文件）长度差异巨大
+超窗..</p><a class="button is-default mt-2 has-text-weight-semibold" href="/2026/09/21/agent%E8%AE%B0%E5%BF%86%E6%9E%B6%E6%9E%84/">更多</a></section></article><article class="post-item-card"><section class="content post-card-content p-4 pb-5"><header><a href="/tags/agent"><i class="tag post-item-tag">agent</i></a><a href="/tags/PI"><i class="tag post-item-tag">PI</i></a><a href="/tags/harness"><i class="tag post-item-tag">harness</i></a></header><h2 class="mt-4 mb-0 is-family-serif"><a href="/2026/09/21/PI-agent-harness%E6%9E%B6%E6%9E%84%E6%B5%85%E8%B0%88/">PI agent harness架构浅谈</a></h2><time class="has-text-grey" datetime="2026-09-21T13:31:56.000Z">2026-09-21</time><p class="is-flex-grow-2 mt-2">1. PI将harness层拆成了四个可扩展部分
 扩展层：这里的扩展层可以是钩子函数包装成的扩展，也可以是MCP服务，skill，虽然官方不支持MCP等功能，但是我们都可以通过扩展实现，包括通过扩展控制不同的挂载点。
 skill层：这个就是根据当前持有的skill，渐进式披露工具的信息，通过不同skill，达到不同的效果。
 提示词层: PI可以将AGENTS.md， SYSTEM.md, CLUADE.md等加入到上下文提示词中，先加载全局，在加载项目级
 主题层: TUI外观
 
 这个分层思路本身就是一种 harness 设计：把”模型能看到什么、什么时候能看到”完全交给规则和扩展，而不是写死在内核里。
-</p><a class="button is-default mt-2 has-text-weight-semibold" href="/2026/09/21/PI-agent-harness%E6%9E%B6%E6%9E%84%E6%B5%85%E8%B0%88/">更多</a></section></article></section><aside class="column is-hidden-mobile is-4-tablet is-3-widescreen"><div style="position: sticky; top: 50px;"><main class="aside-card-container archives-widget is-in-archive-page"><h3>归档</h3><section><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/09/">九月 2026</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2025/11/">十一月 2025</a><span class="archive-list-count">1</span></li></ul></section></main></div></aside></div></article><script>$claudia.fadeInImage(null, $claudia.blurBackdropImg)
+</p><a class="button is-default mt-2 has-text-weight-semibold" href="/2026/09/21/PI-agent-harness%E6%9E%B6%E6%9E%84%E6%B5%85%E8%B0%88/">更多</a></section></article></section><aside class="column is-hidden-mobile is-4-tablet is-3-widescreen"><div style="position: sticky; top: 50px;"><main class="aside-card-container archives-widget is-in-archive-page"><h3>归档</h3><section><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/09/">九月 2026</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2025/11/">十一月 2025</a><span class="archive-list-count">1</span></li></ul></section></main></div></aside></div></article><script>$claudia.fadeInImage(null, $claudia.blurBackdropImg)
 
 window.addEventListener('resize', $claudia.throttle(function () {
     var images = document.querySelectorAll('.js-img-fadeIn')
